@@ -143,56 +143,63 @@
   </div>
 
   <script>
-    async function enviar() {
-      const comercial = document.getElementById('comercial').value.trim();
-      const cliente = document.getElementById('cliente').value.trim();
-      const direccion = document.getElementById('direccion').value.trim();
-      const archivo = document.getElementById('archivo').files[0];
+  async function enviar() {
+  const comercial = document.getElementById('comercial').value.trim();
+  const cliente = document.getElementById('cliente').value.trim();
+  const direccion = document.getElementById('direccion').value.trim();
+  const archivo = document.getElementById('archivo').files[0];
 
-      if (!comercial || !cliente || !direccion || !archivo) {
-        alert('Por favor completa todos los campos y sube el PDF.');
-        return;
-      }
+  if (!comercial || !cliente || !direccion || !archivo) {
+    alert('Por favor completa todos los campos y sube el PDF.');
+    return;
+  }
 
-      const btn = document.getElementById('btn');
-      btn.disabled = true;
-      btn.textContent = 'Generando...';
+  const btn = document.getElementById('btn');
+  btn.disabled = true;
+  btn.textContent = 'Generando...';
+  document.getElementById('status-loading').style.display = 'block';
+  document.getElementById('status-success').style.display = 'none';
+  document.getElementById('status-error').style.display = 'none';
 
-      document.getElementById('status-loading').style.display = 'block';
-      document.getElementById('status-success').style.display = 'none';
-      document.getElementById('status-error').style.display = 'none';
+  const hoy = new Date();
+  const fecha = `${String(hoy.getDate()).padStart(2,'0')}/${String(hoy.getMonth()+1).padStart(2,'0')}/${hoy.getFullYear()}`;
 
-      const hoy = new Date();
-      const fecha = `${String(hoy.getDate()).padStart(2,'0')}/${String(hoy.getMonth()+1).padStart(2,'0')}/${hoy.getFullYear()}`;
+  // Convertir PDF a base64 en el navegador
+  const base64 = await new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onload = () => resolve(reader.result.split(',')[1]);
+    reader.onerror = reject;
+    reader.readAsDataURL(archivo);
+  });
 
-      const formData = new FormData();
-      formData.append('nombre_comercial', comercial);
-      formData.append('nombre_cliente', cliente);
-      formData.append('direccion_fiscal', direccion);
-      formData.append('fecha_sow', fecha);
-      formData.append('archivo_pdf', archivo);
+  try {
+    const response = await fetch('https://preventanateevo.app.n8n.cloud/webhook/sow-nateevo', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        nombre_comercial: comercial,
+        nombre_cliente: cliente,
+        direccion_fiscal: direccion,
+        fecha_sow: fecha,
+        archivo_base64: base64,
+        archivo_nombre: archivo.name
+      })
+    });
 
-      try {
-        const response = await fetch('https://preventanateevo.app.n8n.cloud/webhook/sow-nateevo', {
-          method: 'POST',
-          body: formData
-        });
-
-        document.getElementById('status-loading').style.display = 'none';
-
-        if (response.ok) {
-          document.getElementById('status-success').style.display = 'block';
-        } else {
-          document.getElementById('status-error').style.display = 'block';
-        }
-      } catch (err) {
-        document.getElementById('status-loading').style.display = 'none';
-        document.getElementById('status-error').style.display = 'block';
-      }
-
-      btn.disabled = false;
-      btn.textContent = 'Generar SOW';
+    document.getElementById('status-loading').style.display = 'none';
+    if (response.ok) {
+      document.getElementById('status-success').style.display = 'block';
+    } else {
+      document.getElementById('status-error').style.display = 'block';
     }
+  } catch (err) {
+    document.getElementById('status-loading').style.display = 'none';
+    document.getElementById('status-error').style.display = 'block';
+  }
+
+  btn.disabled = false;
+  btn.textContent = 'Generar SOW';
+}
   </script>
 </body>
 </html>
