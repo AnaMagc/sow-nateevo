@@ -178,11 +178,24 @@
     });
 
     document.getElementById('status-loading').style.display = 'none';
-    if (response.ok) {
-      document.getElementById('status-success').style.display = 'block';
-    } else {
-      document.getElementById('status-error').style.display = 'block';
-    }
+   const texto = await response.text();
+  if (response.ok && texto) {
+  // Crear archivo y descargarlo automáticamente
+  const blob = new Blob([texto], { type: 'text/plain;charset=utf-8' });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = `SOW-${document.getElementById('cliente').value.trim()}-${new Date().toISOString().split('T')[0]}.txt`;
+  document.body.appendChild(a);
+  a.click();
+  document.body.removeChild(a);
+  URL.revokeObjectURL(url);
+  
+  document.getElementById('status-success').innerHTML = '✅ ¡SOW generado! El archivo se está descargando automáticamente.';
+  document.getElementById('status-success').style.display = 'block';
+} else {
+  document.getElementById('status-error').style.display = 'block';
+}
   } catch (err) {
     document.getElementById('status-loading').style.display = 'none';
     document.getElementById('status-error').style.display = 'block';
