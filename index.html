@@ -164,26 +164,17 @@
   const hoy = new Date();
   const fecha = `${String(hoy.getDate()).padStart(2,'0')}/${String(hoy.getMonth()+1).padStart(2,'0')}/${hoy.getFullYear()}`;
 
-  // Convertir PDF a base64 en el navegador
-  const base64 = await new Promise((resolve, reject) => {
-    const reader = new FileReader();
-    reader.onload = () => resolve(reader.result.split(',')[1]);
-    reader.onerror = reject;
-    reader.readAsDataURL(archivo);
-  });
+  const formData = new FormData();
+  formData.append('nombre_comercial', comercial);
+  formData.append('nombre_cliente', cliente);
+  formData.append('direccion_fiscal', direccion);
+  formData.append('fecha_sow', fecha);
+  formData.append('archivo_pdf', archivo);
 
   try {
     const response = await fetch('https://preventanateevo.app.n8n.cloud/webhook/sow-nateevo', {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        nombre_comercial: comercial,
-        nombre_cliente: cliente,
-        direccion_fiscal: direccion,
-        fecha_sow: fecha,
-        archivo_base64: base64,
-        archivo_nombre: archivo.name
-      })
+      body: formData
     });
 
     document.getElementById('status-loading').style.display = 'none';
@@ -200,6 +191,7 @@
   btn.disabled = false;
   btn.textContent = 'Generar SOW';
 }
+
   </script>
 </body>
 </html>
