@@ -111,6 +111,11 @@
       <label>Nombre del comercial *</label>
       <input type="text" id="comercial" placeholder="Ej. Ana María González" required>
     </div>
+   
+    <div class="field">
+      <label>Correo del comercial *</label>
+      <input type="email" id="correo_comercial" placeholder="ejemplo@nateevo.com" required>
+    </div>
 
     <div class="field">
       <label>Nombre del cliente (registro legal) *</label>
@@ -145,14 +150,15 @@
   <script>
   async function enviar() {
   const comercial = document.getElementById('comercial').value.trim();
+  const correoComercial = document.getElementById('correo_comercial').value.trim();
   const cliente = document.getElementById('cliente').value.trim();
   const direccion = document.getElementById('direccion').value.trim();
   const archivo = document.getElementById('archivo').files[0];
 
-  if (!comercial || !cliente || !direccion || !archivo) {
-    alert('Por favor completa todos los campos y sube el PDF.');
-    return;
-  }
+  if (!comercial || !correoComercial || !cliente || !direccion || !archivo) {
+  alert('Por favor completa todos los campos y sube el PDF.');
+  return;
+}
 
   const btn = document.getElementById('btn');
   btn.disabled = true;
@@ -166,6 +172,7 @@
 
   const formData = new FormData();
   formData.append('nombre_comercial', comercial);
+  formData.append('correo_comercial', correoComercial);
   formData.append('nombre_cliente', cliente);
   formData.append('direccion_fiscal', direccion);
   formData.append('fecha_sow', fecha);
