@@ -136,111 +136,100 @@
     <button id="btn" onclick="enviar()">Generar SOW</button>
 
     <div class="status loading" id="status-loading">
-      <span class="spinner"></span>
-      Generando tu SOW... esto puede tardar entre 30 y 60 segundos.
+    <span class="spinner"></span>
+      Generando tu SOW... este proceso puede tardar hasta 3 minutos. Por favor no cierres esta ventana ni recargues la página.
     </div>
     <div class="status success" id="status-success">
-      ✅ SOW generado exitosamente. El equipo recibirá el documento en breve.
+      ✅ SOW generado exitosamente. El documento fue procesado y será enviado por correo.
     </div>
     <div class="status error" id="status-error">
-      ❌ Ocurrió un error. Por favor intenta de nuevo o contacta a soporte.
+      ❌ No pudimos confirmar la generación del documento. Si no lo recibes por correo en unos minutos, por favor intenta nuevamente o contacta a soporte.
     </div>
   </div>
 
-  <script>
-  async function enviar() {
+ <script>
+async function enviar() {
   const comercial = document.getElementById('comercial').value.trim();
   const correoComercial = document.getElementById('correo_comercial').value.trim();
   const cliente = document.getElementById('cliente').value.trim();
   const direccion = document.getElementById('direccion').value.trim();
   const archivo = document.getElementById('archivo').files[0];
 
+  const btn = document.getElementById('btn');
+  const statusLoading = document.getElementById('status-loading');
+  const statusSuccess = document.getElementById('status-success');
+  const statusError = document.getElementById('status-error');
+
   if (!comercial || !correoComercial || !cliente || !direccion || !archivo) {
-  alert('Por favor completa todos los campos y sube el PDF.');
-  return;
-}
-
- const btn = document.getElementById('btn');
-btn.disabled = true;
-btn.textContent = 'Generando...';
-document.getElementById('status-loading').style.display = 'block';
-document.getElementById('status-success').style.display = 'none';
-document.getElementById('status-error').style.display = 'none';
-
-const hoy = new Date();
-const fecha = `${String(hoy.getDate()).padStart(2,'0')}/${String(hoy.getMonth()+1).padStart(2,'0')}/${hoy.getFullYear()}`;
-
-const formData = new FormData();
-formData.append('nombre_comercial', comercial);
-formData.append('correo_comercial', correoComercial);
-formData.append('nombre_cliente', cliente);
-formData.append('direccion_fiscal', direccion);
-formData.append('fecha_sow', fecha);
-formData.append('archivo_pdf', archivo);
-
-try {
-  const response = await fetch('https://preventanateevo.app.n8n.cloud/webhook/sow-nateevo', {
-    method: 'POST',
-    body: formData
-  });
-
-  document.getElementById('status-loading').style.display = 'none';
-
-  let data = null;
-  let texto = '';
-
-  try {
-    data = await response.json(); // 👈 intenta JSON (nuevo modelo)
-  } catch (e) {
-    texto = await response.text(); // 👈 fallback actual
+    alert('Por favor completa todos los campos y sube el PDF.');
+    return;
   }
 
-  if (response.ok) {
+  btn.disabled = true;
+  btn.textContent = 'Generando...';
+  statusLoading.style.display = 'block';
+  statusSuccess.style.display = 'none';
+  statusError.style.display = 'none';
 
-    // 🟢 CASO NUEVO (cuando n8n devuelva JSON)
-    if (data && data.message) {
+  const hoy = new Date();
+  const fecha = `${String(hoy.getDate()).padStart(2,'0')}/${String(hoy.getMonth()+1).padStart(2,'0')}/${hoy.getFullYear()}`;
 
-      document.getElementById('status-success').innerHTML = `
-        ✅ ${data.message}<br>
-        <strong>ID de solicitud:</strong> ${data.request_id || 'No disponible'}
-      `;
-      document.getElementById('status-success').style.display = 'block';
+  const formData = new FormData();
+  formData.append('nombre_comercial', comercial);
+  formData.append('correo_comercial', correoComercial);
+  formData.append('nombre_cliente', cliente);
+  formData.append('direccion_fiscal', direccion);
+  formData.append('fecha_sow', fecha);
+  formData.append('archivo_pdf', archivo);
 
-    } 
-    // 🟡 CASO ACTUAL (tu flujo de descarga)
-    else if (texto) {
+  try {
+    const response = await fetch('https://preventanateevo.app.n8n.cloud/webhook/sow-nateevo', {
+      method: 'POST',
+      body: formData
+    });
 
-      const blob = new Blob([texto], { type: 'text/plain;charset=utf-8' });
-      const url = URL.createObjectURL(blob);
-      const a = document.createElement('a');
-      a.href = url;
-      a.download = `SOW-${cliente}-${new Date().toISOString().split('T')[0]}.txt`;
-      document.body.appendChild(a);
-      a.click();
-      document.body.removeChild(a);
-      URL.revokeObjectURL(url);
+    let data = null;
+    let texto = '';
 
-      document.getElementById('status-success').innerHTML =
-        '✅ ¡SOW generado! El archivo se está descargando automáticamente.';
-      document.getElementById('status-success').style.display = 'block';
+    const contentType = response.headers.get('content-type') || '';
 
+    if (contentType.includes('application/json')) {
+      data = await response.json();
     } else {
-      document.getElementById('status-error').style.display = 'block';
+      texto = await response.text();
     }
-    
-    } else {
-        document.getElementById('status-error').style.display = 'block';
+
+    statusLoading.style.display = 'none';
+
+    if (response.ok) {
+      // Caso ideal: n8n devuelve JSON con mensaje
+      if (data && data.message) {
+        statusSuccess.innerHTML = `✅ ${data.message}`;
+        statusSuccess.style.display = 'block';
       }
-    
-    } catch (err) {
-      document.getElementById('status-loading').style.display = 'none';
-      document.getElementById('status-error').style.display = 'block';
+      // Caso transicional: n8n devuelve texto no vacío pero el proceso fue exitoso
+      else if (texto && texto.trim().length > 0) {
+        statusSuccess.innerHTML = '✅ SOW generado exitosamente. El documento fue procesado y enviado por correo.';
+        statusSuccess.style.display = 'block';
+      }
+      // Caso 200 OK sin cuerpo útil: igual no lo damos por error duro
+      else {
+        statusSuccess.innerHTML = '✅ Tu solicitud fue recibida y procesada. Si no ves el correo en unos minutos, revisa spam o solicita soporte.';
+        statusSuccess.style.display = 'block';
+      }
+    } else {
+      statusError.style.display = 'block';
     }
-    
+
+  } catch (err) {
+    console.error('Error al enviar solicitud:', err);
+    statusLoading.style.display = 'none';
+    statusError.style.display = 'block';
+  } finally {
     btn.disabled = false;
     btn.textContent = 'Generar SOW';
+  }
 }
-
-  </script>
+</script>
 </body>
 </html>
